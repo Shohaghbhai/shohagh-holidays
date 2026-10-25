@@ -1,0 +1,6 @@
+{
+  "name": "GreenBelt Bangladesh - Domestic Tour Packages & Travel Agency",
+  "description": "GreenBelt Bangladesh: Premier domestic travel agency offering Sajek, Saint Martin, Cox's Bazar, Sundarbans, and Tanguar Haor tour packages, bus & ship tickets with instant WhatsApp booking.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
