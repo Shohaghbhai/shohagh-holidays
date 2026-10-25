@@ -4,6 +4,20 @@ import { INITIAL_PACKAGES, INITIAL_BUS_SERVICES, INITIAL_SHIPS, INITIAL_TIPS } f
 
 const WHATSAPP_NUMBER = '8801572596078'; // +8801572596078
 
+const ADMIN_EMAIL = 'asksohag23@gmail.com';
+const ADMIN_SALT = 'shohagh-holidays-v1';
+const ADMIN_HASH_KEY = 'shohagh_admin_pw_hash';
+// SHA-256 hash only. The real password is not stored anywhere in the code.
+const ADMIN_PASSWORD_HASH = 'b3e00f8976394fac88ff06ecb00f248d8672d3fbd1fe95290dc719fbb86d3d72';
+
+async function hashCredentials(email: string, password: string): Promise<string> {
+  const data = new TextEncoder().encode(ADMIN_SALT + ':' + email + ':' + password);
+  const digest = await crypto.subtle.digest('SHA-256', data);
+  return Array.from(new Uint8Array(digest))
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('');
+}
+
 interface ToastMessage {
   id: string;
   type: 'success' | 'error' | 'info';
@@ -20,7 +34,8 @@ interface TravelContextType {
   selectedTip: TravelTip | null;
   setSelectedTip: (tip: TravelTip | null) => void;
   isAdminLoggedIn: boolean;
-  loginAdmin: (password: string) => boolean;
+  loginAdmin: (email: string, password: string) => Promise<boolean>;
+  changeAdminPassword: (currentPassword: string, newPassword: string) => Promise<boolean>;
   logoutAdmin: () => void;
   showAdminModal: boolean;
   setShowAdminModal: (show: boolean) => void;
@@ -147,15 +162,45 @@ export const TravelProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   }, [travelTips]);
 
   // Admin Auth
-  const loginAdmin = (password: string): boolean => {
-    if (password === 'admin123' || password === 'greenbelt2026') {
+  const loginAdmin = async (email: string, password: string): Promise<boolean> => {
+    const cleanEmail = email.trim().toLowerCase();
+    let stored = ADMIN_PASSWORD_HASH;
+    try {
+      stored = localStorage.getItem(ADMIN_HASH_KEY) || ADMIN_PASSWORD_HASH;
+    } catch {
+      // ignore storage errors
+    }
+    const attempt = await hashCredentials(cleanEmail, password);
+    if (cleanEmail === ADMIN_EMAIL && attempt === stored) {
       setIsAdminLoggedIn(true);
       localStorage.setItem('greenbelt_admin_auth', 'true');
       addToast('Welcome back, Admin! Real-time dashboard unlocked.', 'success');
       return true;
     }
-    addToast('Incorrect admin passkey. Default is: admin123', 'error');
+    addToast('Incorrect email or password.', 'error');
     return false;
+  };
+
+  const changeAdminPassword = async (currentPassword: string, newPassword: string): Promise<boolean> => {
+    let stored = ADMIN_PASSWORD_HASH;
+    try {
+      stored = localStorage.getItem(ADMIN_HASH_KEY) || ADMIN_PASSWORD_HASH;
+    } catch {
+      // ignore storage errors
+    }
+    const current = await hashCredentials(ADMIN_EMAIL, currentPassword);
+    if (current !== stored) {
+      addToast('Current password is incorrect.', 'error');
+      return false;
+    }
+    if (newPassword.length < 8) {
+      addToast('New password must be at least 8 characters.', 'error');
+      return false;
+    }
+    const next = await hashCredentials(ADMIN_EMAIL, newPassword);
+    localStorage.setItem(ADMIN_HASH_KEY, next);
+    addToast('Password changed on this device.', 'success');
+    return true;
   };
 
   const logoutAdmin = () => {
@@ -290,6 +335,7 @@ export const TravelProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         setSelectedTip,
         isAdminLoggedIn,
         loginAdmin,
+        changeAdminPassword,
         logoutAdmin,
         showAdminModal,
         setShowAdminModal,
