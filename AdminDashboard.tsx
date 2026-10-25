@@ -32,6 +32,7 @@ export const AdminDashboard: React.FC<{ onClose?: () => void }> = ({ onClose }) 
     travelTips,
     isAdminLoggedIn,
     loginAdmin,
+    changeAdminPassword,
     logoutAdmin,
     addPackage,
     updatePackage,
@@ -49,7 +50,11 @@ export const AdminDashboard: React.FC<{ onClose?: () => void }> = ({ onClose }) 
     addToast,
   } = useTravel();
 
+  const [emailInput, setEmailInput] = useState('');
   const [passwordInput, setPasswordInput] = useState('');
+  const [showPwForm, setShowPwForm] = useState(false);
+  const [curPw, setCurPw] = useState('');
+  const [newPw, setNewPw] = useState('');
   const [activeTab, setActiveTab] = useState<'packages' | 'buses' | 'ships' | 'tips' | 'supabase' | 'domain'>('packages');
   const [customDomainInput, setCustomDomainInput] = useState('shohaghholidays.com');
 
@@ -155,10 +160,20 @@ export const AdminDashboard: React.FC<{ onClose?: () => void }> = ({ onClose }) 
   const [quickPricePackageId, setQuickPricePackageId] = useState<string | null>(null);
   const [quickPriceValue, setQuickPriceValue] = useState<number>(0);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    loginAdmin(passwordInput);
+    await loginAdmin(emailInput, passwordInput);
     setPasswordInput('');
+  };
+
+  const handleChangePw = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const ok = await changeAdminPassword(curPw, newPw);
+    if (ok) {
+      setCurPw('');
+      setNewPw('');
+      setShowPwForm(false);
+    }
   };
 
   const copySqlSchema = () => {
@@ -246,20 +261,32 @@ CREATE POLICY "Public read ships" ON public.ship_services FOR SELECT USING (true
         <form onSubmit={handleLogin} className="space-y-4">
           <div className="text-left">
             <label className="block text-xs font-bold text-slate-700 mb-1">
-              Admin Passkey
+              Admin Email
             </label>
             <input
-              type="password"
-              placeholder="Enter passkey..."
-              value={passwordInput}
-              onChange={(e) => setPasswordInput(e.target.value)}
+              type="email"
+              placeholder="Enter admin email..."
+              value={emailInput}
+              onChange={(e) => setEmailInput(e.target.value)}
+              autoComplete="username"
               className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-600"
               autoFocus
             />
-            <p className="text-[11px] text-emerald-700 font-semibold mt-1.5 flex items-center gap-1">
-              <span>Default Passkey:</span>
-              <code className="bg-emerald-50 border border-emerald-200 px-1 py-0.2 rounded font-mono">admin123</code>
-            </p>
+          </div>
+
+          <div className="text-left">
+            <label className="block text-xs font-bold text-slate-700 mb-1">
+              Password
+            </label>
+            <input
+              type="password"
+              placeholder="Enter password..."
+              autoComplete="current-password"
+              value={passwordInput}
+              onChange={(e) => setPasswordInput(e.target.value)}
+              className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-600"
+              
+            />
           </div>
 
           <button
@@ -321,6 +348,14 @@ CREATE POLICY "Public read ships" ON public.ship_services FOR SELECT USING (true
           </button>
 
           <button
+            onClick={() => setShowPwForm((v) => !v)}
+            className="flex items-center gap-1 text-xs text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 px-3 py-1.5 rounded-lg border border-slate-700 transition-colors"
+          >
+            <Lock className="w-3.5 h-3.5" />
+            <span>Change Password</span>
+          </button>
+
+          <button
             onClick={logoutAdmin}
             className="flex items-center gap-1 text-xs text-red-300 hover:text-red-100 bg-red-950/60 hover:bg-red-900/60 px-3 py-1.5 rounded-lg border border-red-800 transition-colors"
           >
@@ -338,6 +373,34 @@ CREATE POLICY "Public read ships" ON public.ship_services FOR SELECT USING (true
           )}
         </div>
       </div>
+
+      {showPwForm && (
+        <form onSubmit={handleChangePw} className="bg-slate-50 border-b border-slate-200 p-4 flex flex-col sm:flex-row gap-3 sm:items-end">
+          <div className="flex-1">
+            <label className="block text-xs font-bold text-slate-700 mb-1">Current password</label>
+            <input
+              type="password"
+              value={curPw}
+              onChange={(e) => setCurPw(e.target.value)}
+              autoComplete="current-password"
+              className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm"
+            />
+          </div>
+          <div className="flex-1">
+            <label className="block text-xs font-bold text-slate-700 mb-1">New password (min 8 characters)</label>
+            <input
+              type="password"
+              value={newPw}
+              onChange={(e) => setNewPw(e.target.value)}
+              autoComplete="new-password"
+              className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm"
+            />
+          </div>
+          <button type="submit" className="bg-emerald-800 hover:bg-emerald-900 text-white font-bold px-4 py-2 rounded-lg text-sm">
+            Save
+          </button>
+        </form>
+      )}
 
       {/* Admin Tabs */}
       <div className="flex items-center gap-2 p-3 bg-slate-100 border-b border-slate-200 overflow-x-auto text-xs font-bold text-slate-700">
